@@ -15,6 +15,9 @@ COPY DataPilot/DataPilot/ ./
 # Install dependencies using npm install instead of npm ci to avoid workspace issues
 RUN npm install --production=false
 
+# Debug: List files to verify structure
+RUN ls -la && ls -la prisma/
+
 # Generate Prisma client
 RUN npx prisma generate
 
