@@ -7,9 +7,10 @@ FROM base AS deps
 RUN apk add --no-cache libc6-compat
 WORKDIR /app
 
-# Copy package files
+# Copy package files from the actual Next.js app directory
 COPY DataPilot/DataPilot/package*.json ./
-RUN npm ci --only=production
+# Install dependencies using npm install instead of npm ci to avoid workspace issues
+RUN npm install --production=false
 
 # Rebuild the source code only when needed
 FROM base AS builder
