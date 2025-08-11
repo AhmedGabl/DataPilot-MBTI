@@ -1,0 +1,21 @@
+{
+  "version": 2,
+  "buildCommand": "cd DataPilot/DataPilot && npm install && npm run build",
+  "outputDirectory": "DataPilot/DataPilot/.next",
+  "installCommand": "cd DataPilot/DataPilot && npm install",
+  "framework": "nextjs",
+  "functions": {
+    "DataPilot/DataPilot/pages/api/**/*.js": {
+      "runtime": "nodejs18.x"
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/DataPilot/DataPilot/$1"
+    }
+  ],
+  "env": {
+    "NODE_ENV": "production"
+  }
+}
