@@ -53,7 +53,7 @@ module.exports = {
           900: '#171717',
           950: '#0a0a0a'
         },
-        // Brand colors
+        // Legacy support
         brand: {
           yellow: "#facc15",
           'yellow-light': "#fef9c3",
