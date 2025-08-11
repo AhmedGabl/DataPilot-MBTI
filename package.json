@@ -5,11 +5,12 @@
   "main": "DataPilot/DataPilot/next.config.js",
   "scripts": {
     "dev": "cd DataPilot/DataPilot && npm run dev",
-    "build": "cd DataPilot/DataPilot && npm run build",
+    "build": "cd DataPilot/DataPilot && npm install && npm run build",
     "start": "cd DataPilot/DataPilot && npm run start",
     "lint": "cd DataPilot/DataPilot && npm run lint",
     "install-deps": "cd DataPilot/DataPilot && npm install",
-    "setup": "cd DataPilot/DataPilot && npm install && npx prisma generate"
+    "setup": "cd DataPilot/DataPilot && npm install && npx prisma generate",
+    "postinstall": "cd DataPilot/DataPilot && npm install"
   },
   "keywords": [
     "mbti",
@@ -32,5 +33,9 @@
   "bugs": {
     "url": "https://github.com/AhmedGabl/DataPilot-MBTI/issues"
   },
-  "homepage": "https://github.com/AhmedGabl/DataPilot-MBTI#readme"
+  "homepage": "https://github.com/AhmedGabl/DataPilot-MBTI#readme",
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
+  }
 }
