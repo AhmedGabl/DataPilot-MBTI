@@ -1,0 +1,36 @@
+{
+  "name": "datapilot-mbti",
+  "version": "1.0.0",
+  "description": "A comprehensive MBTI personality assessment application built with Next.js, TypeScript, and Tailwind CSS",
+  "main": "DataPilot/DataPilot/next.config.js",
+  "scripts": {
+    "dev": "cd DataPilot/DataPilot && npm run dev",
+    "build": "cd DataPilot/DataPilot && npm run build",
+    "start": "cd DataPilot/DataPilot && npm run start",
+    "lint": "cd DataPilot/DataPilot && npm run lint",
+    "install-deps": "cd DataPilot/DataPilot && npm install",
+    "setup": "cd DataPilot/DataPilot && npm install && npx prisma generate"
+  },
+  "keywords": [
+    "mbti",
+    "personality",
+    "assessment",
+    "nextjs",
+    "typescript",
+    "tailwindcss",
+    "psychology",
+    "personality-test",
+    "react",
+    "prisma"
+  ],
+  "author": "AhmedGabl",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/AhmedGabl/DataPilot-MBTI.git"
+  },
+  "bugs": {
+    "url": "https://github.com/AhmedGabl/DataPilot-MBTI/issues"
+  },
+  "homepage": "https://github.com/AhmedGabl/DataPilot-MBTI#readme"
+}
