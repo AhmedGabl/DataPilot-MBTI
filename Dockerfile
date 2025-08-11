@@ -9,7 +9,7 @@ RUN apk add --no-cache libc6-compat
 # Set working directory
 WORKDIR /app
 
-# Copy the entire DataPilot/DataPilot directory to preserve structure
+# Copy the entire DataPilot/DataPilot directory to preserve structure and ensure Prisma schema is available
 COPY DataPilot/DataPilot/ ./
 
 # Install dependencies using npm install instead of npm ci to avoid workspace issues
