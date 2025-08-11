@@ -1,266 +1,300 @@
 import { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/router';
-import { motion } from 'framer-motion';
-import { useAuth } from '../hooks/useAuth';
+import { signIn, signOut, useSession } from 'next-auth/react';
+import { Eye, EyeOff, ArrowLeft, User, Mail, Lock } from 'lucide-react';
 
-export default function HomePage() {
-  const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
-  const [showAuth, setShowAuth] = useState(false);
-  const { user, login, register, logout } = useAuth();
+interface AuthFormData {
+  fullName: string;
+  email: string;
+  password: string;
+}
+
+interface AuthErrors {
+  fullName?: string;
+  email?: string;
+  password?: string;
+  general?: string;
+}
+
+export default function Home() {
   const router = useRouter();
+  const { data: session, status } = useSession();
+  const [showAuth, setShowAuth] = useState(false);
+  const [authMode, setAuthMode] = useState<'signin' | 'signup'>('signin');
+  const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [formData, setFormData] = useState<AuthFormData>({
+    fullName: '',
+    email: '',
+    password: ''
+  });
+  const [errors, setErrors] = useState<AuthErrors>({});
 
-  // Redirect authenticated users to dashboard
-  useEffect(() => {
-    if (user) {
-      router.push('/dashboard');
+  const validateForm = (): boolean => {
+    const newErrors: AuthErrors = {};
+    
+    if (authMode === 'signup' && !formData.fullName.trim()) {
+      newErrors.fullName = 'Full name is required';
     }
-  }, [user, router]);
+    
+    if (!formData.email.trim()) {
+      newErrors.email = 'Email is required';
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      newErrors.email = 'Please enter a valid email address';
+    }
+    
+    if (!formData.password) {
+      newErrors.password = 'Password is required';
+    } else if (authMode === 'signup' && formData.password.length < 6) {
+      newErrors.password = 'Password must be at least 6 characters';
+    }
+    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleInputChange = (field: keyof AuthFormData, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+    if (errors[field]) {
+      setErrors(prev => ({ ...prev, [field]: undefined }));
+    }
+  };
+
+  const handleAuth = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!validateForm()) return;
+    
+    setIsLoading(true);
+    setErrors({});
+    
+    try {
+      if (authMode === 'signin') {
+        const result = await signIn('credentials', {
+          email: formData.email,
+          password: formData.password,
+          redirect: false,
+        });
+        
+        if (result?.error) {
+          setErrors({ general: 'Invalid email or password' });
+        } else {
+          router.push('/test');
+        }
+      } else {
+        const response = await fetch('/api/auth/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(formData),
+        });
+        
+        const data = await response.json();
+        
+        if (!response.ok) {
+          setErrors({ general: data.message || 'Registration failed' });
+        } else {
+          const result = await signIn('credentials', {
+            email: formData.email,
+            password: formData.password,
+            redirect: false,
+          });
+          
+          if (result?.error) {
+            setErrors({ general: 'Registration successful, but login failed' });
+          } else {
+            router.push('/test');
+          }
+        }
+      }
+    } catch (error) {
+      setErrors({ general: 'An unexpected error occurred' });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const startTest = () => {
-    if (user) {
+    if (session) {
       router.push('/test');
     } else {
       setShowAuth(true);
-      setAuthMode('signup');
     }
   };
 
-  const AuthForm = ({ mode }: { mode: 'login' | 'signup' }) => {
-    const [formData, setFormData] = useState({
-      name: '',
-      email: '',
-      password: ''
-    });
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState('');
-
-    const handleSubmit = async (e: React.FormEvent) => {
-      e.preventDefault();
-      setLoading(true);
-      setError('');
-
-      try {
-        if (mode === 'signup') {
-          await register(formData);
-        } else {
-          await login({ email: formData.email, password: formData.password });
-        }
-        // User will be redirected by useEffect
-      } catch (err: any) {
-        setError(err.message || `${mode} failed`);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-      setFormData({
-        ...formData,
-        [e.target.name]: e.target.value
-      });
-    };
-
-    return (
-      <motion.div
-        initial={{ opacity: 0, y: 30, scale: 0.95 }}
-        animate={{ opacity: 1, y: 0, scale: 1 }}
-        transition={{ duration: 0.6, ease: "easeOut" }}
-        className="w-full max-w-lg mx-auto bg-gradient-to-br from-white via-white to-secondary-50/40 backdrop-blur-md rounded-3xl shadow-card-hover border border-white/60 p-10 relative overflow-hidden"
-      >
-        {/* Background decorative elements */}
-        <div className="absolute -top-10 -right-10 w-32 h-32 bg-gradient-to-br from-secondary-200/30 to-secondary-400/10 rounded-full blur-2xl animate-pulse-slow"></div>
-        <div className="absolute -bottom-8 -left-8 w-24 h-24 bg-gradient-to-br from-primary-200/20 to-accent-purple/10 rounded-full blur-xl animate-float"></div>
-        
-        <div className="relative z-10">
-          <motion.div 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2, duration: 0.6 }}
-            className="text-center mb-10"
-          >
-            <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-secondary-400 via-accent-orange to-secondary-400 rounded-3xl mx-auto mb-6 shadow-glow-yellow">
-              <span className="text-white font-bold text-2xl">DP</span>
-            </div>
-            <h2 className="text-3xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent mb-3">
-              {mode === 'signup' ? '🚀 Join DataPilot' : '👋 Welcome Back'}
-            </h2>
-            <p className="text-lg text-slate-600 font-medium">
-              {mode === 'signup' ? 'Create your account to start your journey' : 'Sign in to continue your assessment'}
-            </p>
-          </motion.div>
-
-          {error && (
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="mb-8 p-5 bg-gradient-to-r from-red-50 to-red-100/50 border border-red-200 rounded-2xl text-red-700 text-sm font-medium flex items-center space-x-3"
-            >
-              <span className="text-red-500 text-lg">⚠️</span>
-              <span>{error}</span>
-            </motion.div>
-          )}
-
-          <motion.form 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4, duration: 0.6 }}
-            onSubmit={handleSubmit} 
-            className="space-y-6"
-          >
-            {mode === 'signup' && (
-              <motion.div
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.5 }}
-              >
-                <label className="block text-sm font-semibold text-slate-700 mb-3 flex items-center space-x-2">
-                  <span>👤</span>
-                  <span>Full Name</span>
-                </label>
-                <input
-                  type="text"
-                  name="name"
-                  required
-                  value={formData.name}
-                  onChange={handleChange}
-                  className="w-full px-5 py-4 border-2 border-slate-200 rounded-2xl focus:ring-2 focus:ring-secondary-400/50 focus:border-secondary-400 transition-all duration-200 bg-white/80 backdrop-blur-sm text-lg font-medium placeholder-slate-400"
-                  placeholder="Enter your full name"
-                />
-              </motion.div>
-            )}
-            
-            <motion.div
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: mode === 'signup' ? 0.6 : 0.5 }}
-            >
-              <label className="block text-sm font-semibold text-slate-700 mb-3 flex items-center space-x-2">
-                <span>📧</span>
-                <span>Email Address</span>
-              </label>
-              <input
-                type="email"
-                name="email"
-                required
-                value={formData.email}
-                onChange={handleChange}
-                className="w-full px-5 py-4 border-2 border-slate-200 rounded-2xl focus:ring-2 focus:ring-secondary-400/50 focus:border-secondary-400 transition-all duration-200 bg-white/80 backdrop-blur-sm text-lg font-medium placeholder-slate-400"
-                placeholder="Enter your email address"
-              />
-            </motion.div>
-            
-            <motion.div
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: mode === 'signup' ? 0.7 : 0.6 }}
-            >
-              <label className="block text-sm font-semibold text-slate-700 mb-3 flex items-center space-x-2">
-                <span>🔒</span>
-                <span>Password</span>
-              </label>
-              <input
-                type="password"
-                name="password"
-                required
-                value={formData.password}
-                onChange={handleChange}
-                className="w-full px-5 py-4 border-2 border-slate-200 rounded-2xl focus:ring-2 focus:ring-secondary-400/50 focus:border-secondary-400 transition-all duration-200 bg-white/80 backdrop-blur-sm text-lg font-medium placeholder-slate-400"
-                placeholder="Enter your password"
-              />
-            </motion.div>
-
-            <motion.button
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: mode === 'signup' ? 0.8 : 0.7 }}
-              whileHover={{ scale: 1.02, y: -2 }}
-              whileTap={{ scale: 0.98 }}
-              type="submit"
-              disabled={loading}
-              className="group w-full bg-gradient-to-r from-secondary-400 via-accent-orange to-secondary-400 hover:from-accent-orange hover:via-secondary-400 hover:to-accent-orange text-white py-5 px-6 rounded-2xl font-bold text-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 shadow-glow-yellow hover:shadow-card-hover relative overflow-hidden"
-            >
-              <div className="absolute inset-0 bg-shimmer bg-[length:200%_100%] opacity-0 group-hover:opacity-100 group-hover:animate-shimmer transition-opacity duration-300"></div>
-              <div className="relative z-10">
-                {loading ? (
-                  <div className="flex items-center justify-center space-x-3">
-                    <div className="animate-spin rounded-full h-6 w-6 border-2 border-white border-t-transparent"></div>
-                    <span>Processing...</span>
-                  </div>
-                ) : (
-                  <div className="flex items-center justify-center space-x-3">
-                    <span>{mode === 'signup' ? '🎉' : '✨'}</span>
-                    <span>{mode === 'signup' ? 'Create Account' : 'Sign In'}</span>
-                  </div>
-                )}
-              </div>
-            </motion.button>
-          </motion.form>
-
-          <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.9 }}
-            className="mt-8 text-center"
-          >
-            <motion.button
-              whileHover={{ scale: 1.02 }}
-              onClick={() => setAuthMode(mode === 'signup' ? 'login' : 'signup')}
-              className="text-slate-600 hover:text-slate-800 font-semibold text-lg transition-colors duration-200 bg-gradient-to-r from-slate-100 to-primary-50 px-6 py-3 rounded-2xl border border-slate-200 hover:border-slate-300"
-            >
-              {mode === 'signup' ? '🔄 Already have an account? Sign in' : "🆕 Don't have an account? Sign up"}
-            </motion.button>
-          </motion.div>
-
-          <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 1.0 }}
-            className="mt-6 text-center"
-          >
-            <motion.button
-              whileHover={{ scale: 1.02, x: -3 }}
-              onClick={() => setShowAuth(false)}
-              className="text-slate-500 hover:text-slate-700 text-base font-medium transition-all duration-200 flex items-center space-x-2 mx-auto bg-white/60 px-4 py-2 rounded-xl border border-white/40 hover:bg-white/80"
-            >
-              <span>←</span>
-              <span>Back to Home</span>
-            </motion.button>
-          </motion.div>
-        </div>
-      </motion.div>
-    );
+  const resetForm = () => {
+    setFormData({ fullName: '', email: '', password: '' });
+    setErrors({});
+    setShowPassword(false);
   };
+
+  const switchAuthMode = () => {
+    setAuthMode(prev => prev === 'signin' ? 'signup' : 'signin');
+    resetForm();
+  };
+
+  const handleBackToHome = () => {
+    setShowAuth(false);
+    resetForm();
+  };
+
+  useEffect(() => {
+    if (session) {
+      setShowAuth(false);
+      resetForm();
+    }
+  }, [session]);
+
+  if (status === 'loading') {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+      </div>
+    );
+  }
 
   if (showAuth) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-secondary-50 flex items-center justify-center p-6 relative overflow-hidden">
-        {/* Animated background elements */}
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute top-20 left-20 w-64 h-64 bg-gradient-to-br from-secondary-200/30 to-secondary-400/10 rounded-full blur-3xl animate-float"></div>
-          <div className="absolute bottom-20 right-20 w-48 h-48 bg-gradient-to-br from-primary-200/20 to-accent-purple/10 rounded-full blur-2xl animate-float" style={{animationDelay: '2s'}}></div>
-        </div>
-        <AuthForm mode={authMode} />
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-6">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-md relative"
+        >
+          <button
+            onClick={handleBackToHome}
+            className="absolute top-4 left-4 p-2 text-gray-400 hover:text-gray-600 transition-colors"
+          >
+            <ArrowLeft size={20} />
+          </button>
+          
+          <div className="text-center mb-8">
+            <h2 className="text-2xl font-bold text-gray-800 mb-2">
+              {authMode === 'signin' ? 'Welcome Back' : 'Create Account'}
+            </h2>
+            <p className="text-gray-600">
+              {authMode === 'signin' 
+                ? 'Sign in to continue your assessment' 
+                : 'Join us to discover your work style'
+              }
+            </p>
+          </div>
+
+          <form onSubmit={handleAuth} className="space-y-6">
+            <AnimatePresence>
+              {authMode === 'signup' && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="relative"
+                >
+                  <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+                  <input
+                    type="text"
+                    placeholder="Full Name"
+                    value={formData.fullName}
+                    onChange={(e) => handleInputChange('fullName', e.target.value)}
+                    className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all ${
+                      errors.fullName ? 'border-red-500' : 'border-gray-300'
+                    }`}
+                  />
+                  {errors.fullName && (
+                    <p className="text-red-500 text-sm mt-1">{errors.fullName}</p>
+                  )}
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            <div className="relative">
+              <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+              <input
+                type="email"
+                placeholder="Email Address"
+                value={formData.email}
+                onChange={(e) => handleInputChange('email', e.target.value)}
+                className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all ${
+                  errors.email ? 'border-red-500' : 'border-gray-300'
+                }`}
+              />
+              {errors.email && (
+                <p className="text-red-500 text-sm mt-1">{errors.email}</p>
+              )}
+            </div>
+
+            <div className="relative">
+              <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+              <input
+                type={showPassword ? 'text' : 'password'}
+                placeholder="Password"
+                value={formData.password}
+                onChange={(e) => handleInputChange('password', e.target.value)}
+                className={`w-full pl-10 pr-12 py-3 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all ${
+                  errors.password ? 'border-red-500' : 'border-gray-300'
+                }`}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              >
+                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+              </button>
+              {errors.password && (
+                <p className="text-red-500 text-sm mt-1">{errors.password}</p>
+              )}
+            </div>
+
+            {errors.general && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                <p className="text-red-600 text-sm">{errors.general}</p>
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white font-semibold py-3 px-4 rounded-lg transition-colors flex items-center justify-center"
+            >
+              {isLoading ? (
+                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+              ) : (
+                authMode === 'signin' ? 'Sign In' : 'Create Account'
+              )}
+            </button>
+          </form>
+
+          <div className="mt-6 text-center">
+            <p className="text-gray-600">
+              {authMode === 'signin' ? "Don't have an account?" : 'Already have an account?'}
+              <button
+                onClick={switchAuthMode}
+                className="ml-2 text-indigo-600 hover:text-indigo-700 font-semibold"
+              >
+                {authMode === 'signin' ? 'Sign Up' : 'Sign In'}
+              </button>
+            </p>
+          </div>
+        </motion.div>
       </div>
     );
   }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-yellow-100 via-yellow-50 to-amber-50 flex items-center justify-center p-6 relative overflow-hidden">
-      {/* Decorative background circles */}
+      {/* Background decorative circles matching the reference */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-10 left-10 w-80 h-80 bg-gradient-to-br from-yellow-200/40 to-yellow-300/20 rounded-full blur-xl"></div>
-        <div className="absolute bottom-20 right-20 w-96 h-96 bg-gradient-to-br from-amber-200/30 to-yellow-200/20 rounded-full blur-2xl"></div>
-        <div className="absolute top-1/2 left-20 w-64 h-64 bg-gradient-to-br from-yellow-300/20 to-amber-200/10 rounded-full blur-xl"></div>
-        <div className="absolute bottom-10 left-1/3 w-48 h-48 bg-gradient-to-br from-yellow-200/30 to-yellow-100/20 rounded-full blur-lg"></div>
+        <div className="absolute top-0 left-0 w-80 h-80 bg-gradient-to-br from-yellow-200/30 to-yellow-300/20 rounded-full blur-2xl"></div>
+        <div className="absolute bottom-0 right-0 w-96 h-96 bg-gradient-to-br from-yellow-200/25 to-amber-200/15 rounded-full blur-2xl"></div>
       </div>
       
-      <div className="max-w-4xl w-full relative z-10">
+      <div className="max-w-2xl w-full relative z-10">
         {/* Main Card */}
         <motion.div
           initial={{ opacity: 0, y: 30, scale: 0.95 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
           transition={{ duration: 0.8, ease: "easeOut" }}
-          className="rounded-3xl bg-white/90 backdrop-blur-sm shadow-2xl border border-white/50 p-12 text-center relative overflow-hidden"
+          className="rounded-3xl bg-white shadow-lg border border-gray-100 p-12 text-center relative overflow-hidden"
         >
           {/* Browser-like header */}
           <div className="absolute top-0 left-0 right-0 h-8 bg-gray-100 rounded-t-3xl flex items-center px-4 space-x-2">
@@ -274,7 +308,7 @@ export default function HomePage() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2, duration: 0.6 }}
-              className="text-5xl md:text-6xl font-bold text-slate-700 mb-4"
+              className="text-4xl font-bold text-slate-700 mb-4"
             >
               51Talk Work Style
             </motion.h1>
@@ -283,7 +317,7 @@ export default function HomePage() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.3, duration: 0.6 }}
-              className="text-xl text-slate-600 mb-12"
+              className="text-lg text-slate-600 mb-8"
             >
               Explore how you teach, decide, collaborate
             </motion.p>
@@ -298,7 +332,7 @@ export default function HomePage() {
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 onClick={startTest}
-                className="bg-yellow-300 hover:bg-yellow-400 text-slate-700 font-bold px-12 py-4 rounded-2xl transition-all duration-200 text-xl shadow-lg"
+                className="bg-yellow-300 hover:bg-yellow-400 text-slate-700 font-semibold px-8 py-3 rounded-xl transition-all duration-200 text-base shadow-sm"
               >
                 Start Assessment
               </motion.button>
@@ -309,24 +343,24 @@ export default function HomePage() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.5, duration: 0.6 }}
-              className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-2xl mx-auto"
+              className="flex justify-between items-start max-w-md mx-auto"
             >
               <div className="text-left">
-                <h3 className="text-lg font-semibold text-slate-700 mb-4">What to Expect</h3>
-                <div className="space-y-3 text-slate-600">
-                  <div className="flex items-center space-x-3">
-                    <span className="text-lg">•</span>
+                <h3 className="text-sm font-semibold text-slate-700 mb-3">What to Expect</h3>
+                <div className="space-y-1 text-slate-600 text-sm">
+                  <div className="flex items-center space-x-2">
+                    <span className="w-1.5 h-1.5 bg-slate-400 rounded-full"></span>
                     <span>10– 10 min</span>
                   </div>
-                  <div className="flex items-center space-x-3">
-                    <span className="text-lg">•</span>
+                  <div className="flex items-center space-x-2">
+                    <span className="w-1.5 h-1.5 bg-slate-400 rounded-full"></span>
                     <span>4 stages</span>
                   </div>
                 </div>
               </div>
-              <div className="text-left">
-                <div className="flex items-center space-x-3 text-slate-600">
-                  <span className="text-lg">🔒</span>
+              <div className="text-right">
+                <div className="flex items-center space-x-2 text-slate-600 text-sm">
+                  <span className="text-sm">🔒</span>
                   <span>Private by default</span>
                 </div>
               </div>
