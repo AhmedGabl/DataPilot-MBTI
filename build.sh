@@ -14,8 +14,14 @@ echo "Installing dependencies with npm install..."
 # Use npm install instead of npm ci to avoid workspace conflicts
 npm install
 
-echo "Generating Prisma client..."
-npx prisma generate
+# Ensure Prisma schema exists and generate client
+if [ -f "prisma/schema.prisma" ]; then
+    echo "Found Prisma schema, generating client..."
+    npx prisma generate
+else
+    echo "Warning: Prisma schema not found at prisma/schema.prisma"
+    exit 1
+fi
 
 echo "Building the application..."
 npm run build
