@@ -9,6 +9,8 @@ This guide provides comprehensive instructions for deploying the DataPilot MBTI 
 - ✅ Updated Dockerfile to properly handle subdirectory structure
 - ✅ Added .dockerignore for optimized builds
 - ✅ Configured proper build commands for all deployment platforms
+- ✅ **NEW**: Fixed Prisma schema location issues in Docker builds
+- ✅ **NEW**: Enhanced build script with Prisma validation
 
 ## 📁 Project Structure
 
@@ -19,12 +21,14 @@ DataPilot-MBTI/
 │       ├── package.json    # App dependencies
 │       ├── next.config.js  # Next.js configuration
 │       ├── prisma/         # Database schema
+│       │   └── schema.prisma # Prisma schema file
 │       └── src/           # Source code
 ├── package.json           # Root package.json with deployment scripts
 ├── vercel.json           # Vercel deployment config
 ├── railway.json          # Railway deployment config
 ├── Dockerfile            # Docker configuration
 ├── .dockerignore         # Docker ignore file
+├── build.sh              # Enhanced build script
 └── DEPLOYMENT.md         # This file
 ```
 
@@ -36,7 +40,7 @@ DataPilot-MBTI/
 
 ```json
 {
-  "buildCommand": "cd DataPilot/DataPilot && npm install && npm run build",
+  "buildCommand": "./build.sh",
   "outputDirectory": "DataPilot/DataPilot/.next",
   "installCommand": "cd DataPilot/DataPilot && npm install",
   "rewrites": [
@@ -82,7 +86,7 @@ docker run -p 3000:3000 \
 ### Other Platforms (Netlify, Render, etc.)
 
 **Build Settings**:
-- **Build Command**: `cd DataPilot/DataPilot && npm install && npm run build`
+- **Build Command**: `./build.sh`
 - **Publish Directory**: `DataPilot/DataPilot/.next`
 - **Install Command**: `cd DataPilot/DataPilot && npm install`
 
@@ -124,6 +128,28 @@ GOOGLE_ANALYTICS_ID="GA-XXXXXXXXX"
    ```
 
 ## 🐛 Troubleshooting Common Issues
+
+### Issue: "Could not find Prisma Schema" Error
+**Symptoms**: 
+```
+Error: Could not find Prisma Schema that is required for this command.
+Checked following paths:
+schema.prisma: file not found
+prisma/schema.prisma: file not found
+```
+
+**Root Cause**: Docker build process was copying files incorrectly, breaking the directory structure needed for Prisma to locate `schema.prisma`.
+
+**Solution**: ✅ **FIXED** - Updated Dockerfile to:
+1. Copy the entire `DataPilot/DataPilot/` directory structure
+2. Preserve the `prisma/` folder and `schema.prisma` file location
+3. Generate Prisma client in the correct directory context
+4. Enhanced build script validates schema existence before generation
+
+**Technical Details**:
+- **Before**: Copied `package*.json` first, then source code separately
+- **After**: Copy entire directory structure to preserve file relationships
+- **Build Script**: Added validation to ensure `prisma/schema.prisma` exists before running `npx prisma generate`
 
 ### Issue: "next: not found" Error
 **Solution**: This was caused by deployment services trying to build from the root directory. Fixed by:
@@ -170,6 +196,7 @@ Before deploying:
 - [ ] `NEXTAUTH_SECRET` is set to a secure random string
 - [ ] Database migrations are ready to run
 - [ ] Build process tested locally
+- [ ] **NEW**: Prisma schema exists at `DataPilot/DataPilot/prisma/schema.prisma`
 
 After deployment:
 
@@ -179,6 +206,7 @@ After deployment:
 - [ ] MBTI test functionality works
 - [ ] Results are saved correctly
 - [ ] All pages are accessible
+- [ ] **NEW**: Prisma client generated successfully
 
 ## 🔄 Continuous Deployment
 
@@ -194,8 +222,10 @@ If you encounter issues not covered in this guide:
 2. Verify all environment variables are correctly set
 3. Ensure the database is accessible and migrations are applied
 4. Test the build process locally first
+5. **NEW**: Verify Prisma schema file exists and is accessible
 
 ---
 
-**Last Updated**: January 2025
+**Last Updated**: August 2025
 **Application Version**: DataPilot MBTI v1.0
+**Latest Fix**: Prisma schema location resolution for Docker builds
