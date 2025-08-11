@@ -1,9 +1,5 @@
 /** @type {import('next').NextConfig} */
-const withBundleAnalyzer = require('@next/bundle-analyzer')({
-  enabled: process.env.ANALYZE === 'true',
-})
-
-const nextConfig = {
+let nextConfig = {
   reactStrictMode: true,
   output: 'standalone',
   typescript: {
@@ -40,4 +36,16 @@ const nextConfig = {
   },
 }
 
-module.exports = withBundleAnalyzer(nextConfig)
+// Only use bundle analyzer in development or when explicitly enabled
+if (process.env.ANALYZE === 'true') {
+  try {
+    const withBundleAnalyzer = require('@next/bundle-analyzer')({
+      enabled: true,
+    })
+    nextConfig = withBundleAnalyzer(nextConfig)
+  } catch (error) {
+    console.warn('Bundle analyzer not available:', error.message)
+  }
+}
+
+module.exports = nextConfig
