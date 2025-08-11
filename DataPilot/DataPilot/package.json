@@ -1,5 +1,5 @@
 {
-  "name": "workspace",
+  "name": "datapilot-mbti",
   "version": "1.0.0",
   "main": "next.config.js",
   "directories": {
@@ -11,14 +11,22 @@
     "start": "next start",
     "lint": "next lint",
     "postinstall": "prisma generate",
+    "prisma:generate": "prisma generate",
     "prisma:deploy": "prisma migrate deploy",
+    "prisma:migrate": "prisma migrate dev",
     "analyze": "ANALYZE=true npm run build",
+    "railway:build": "npm ci && npx prisma generate && npm run build",
+    "railway:start": "npx prisma migrate deploy && npm start",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "keywords": [],
-  "author": "",
+  "keywords": ["mbti", "personality", "assessment", "nextjs"],
+  "author": "AhmedGabl",
   "license": "ISC",
-  "description": "",
+  "description": "MBTI Personality Assessment Application",
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
+  },
   "dependencies": {
     "@prisma/client": "^6.13.0",
     "@radix-ui/react-avatar": "^1.1.10",
