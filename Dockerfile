@@ -1,4 +1,4 @@
-# Use Node.js 18 Alpine as base image - Updated for Railway cache invalidation
+# Use Node.js 18 Alpine as base image - Force Railway rebuild v2
 FROM node:18-alpine AS base
 
 # Install dependencies only when needed
